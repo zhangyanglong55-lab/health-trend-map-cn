@@ -19,13 +19,13 @@ export const metadata: Metadata = {
   openGraph: {
     title: "健康风向｜全国健康趋势地图",
     description: "以全国地图为核心的健康趋势与城市关联可视化。",
-    images: [{ url: "/og.png", width: 1792, height: 896, alt: "健康风向全国健康趋势地图" }],
+    images: [{ url: "/og-v3.png", width: 1792, height: 896, alt: "健康风向全国天气健康态势" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "健康风向｜全国健康趋势地图",
     description: "以全国地图为核心的健康趋势与城市关联可视化。",
-    images: ["/og.png"],
+    images: ["/og-v3.png"],
   },
   icons: {
     icon: "/favicon.svg",
