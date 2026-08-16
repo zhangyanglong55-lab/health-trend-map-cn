@@ -49,6 +49,7 @@ export default function Home() {
   const [weatherOn, setWeatherOn] = useState(true);
   const [mapSvg, setMapSvg] = useState("");
   const [selectedProvince, setSelectedProvince] = useState("浙江省");
+  const [provinceCardPosition, setProvinceCardPosition] = useState({ left: 72, top: 51 });
 
   useEffect(() => {
     fetch(`/risk-map-${dayIndex}.svg`).then(response => response.text()).then(svg => {
@@ -68,6 +69,11 @@ export default function Home() {
   const handleProvinceClick = (event: React.MouseEvent<HTMLDivElement>) => {
     const path = (event.target as Element).closest("path[data-name]");
     if (!path) return;
+    const mapRect = event.currentTarget.getBoundingClientRect();
+    setProvinceCardPosition({
+      left: Math.min(91, Math.max(9, (event.clientX - mapRect.left) / mapRect.width * 100)),
+      top: Math.min(88, Math.max(10, (event.clientY - mapRect.top) / mapRect.height * 100 - 5)),
+    });
     event.currentTarget.querySelector(".province-active")?.classList.remove("province-active");
     path.classList.add("province-active");
     chooseProvince(path.getAttribute("data-name") ?? "");
@@ -78,6 +84,12 @@ export default function Home() {
     const path = (event.target as Element).closest("path[data-name]");
     if (!path) return;
     event.preventDefault();
+    const mapRect = event.currentTarget.getBoundingClientRect();
+    const pathRect = path.getBoundingClientRect();
+    setProvinceCardPosition({
+      left: Math.min(91, Math.max(9, (pathRect.left + pathRect.width / 2 - mapRect.left) / mapRect.width * 100)),
+      top: Math.min(88, Math.max(10, (pathRect.top - mapRect.top) / mapRect.height * 100 - 3)),
+    });
     event.currentTarget.querySelector(".province-active")?.classList.remove("province-active");
     path.classList.add("province-active");
     chooseProvince(path.getAttribute("data-name") ?? "");
@@ -142,7 +154,7 @@ export default function Home() {
 
         <div className="china-map" aria-label="全国34省区感冒流行风险图">
           <div className="interactive-china-map" onClick={handleProvinceClick} onKeyDown={handleProvinceKey} dangerouslySetInnerHTML={{ __html: mapSvg }} aria-label={`${dateLabel}中国各省流感综合观测地图，点击省份查看`} />
-          <div className="province-reveal" key={selectedProvince}><small>已选择省份</small><b>{selectedProvince}</b><span>点击其他省份继续查看</span></div>
+          <div className="province-reveal" key={selectedProvince} style={{ left: `${provinceCardPosition.left}%`, top: `${provinceCardPosition.top}%` }}><small>已选择</small><b>{selectedProvince}</b></div>
 
           {weatherData.cities.map((city) => {
             const cityRisk = surveillanceRisk(city, dayIndex);
