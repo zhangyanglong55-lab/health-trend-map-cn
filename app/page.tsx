@@ -1,189 +1,141 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type CityKey = "成都" | "杭州";
+type Panel = "city" | "sources" | "none";
 
-const cities: Record<CityKey, {
-  weather: number;
-  temperature: string;
-  change: string;
-  status: string;
-  tone: string;
-  position: { left: string; top: string };
-  detail: string;
-}> = {
-  成都: {
-    weather: 2.68,
-    temperature: "30.7°C",
-    change: "3日升温 1.1°C",
-    status: "天气风险较低",
-    tone: "low",
-    position: { left: "38%", top: "57%" },
-    detail: "当前未出现快速降温。搜索、购药与人口流动指数仍待授权接入。",
-  },
-  杭州: {
-    weather: 40.93,
-    temperature: "27.1°C",
-    change: "3日降温 1.8°C",
-    status: "天气信号需关注",
-    tone: "watch",
-    position: { left: "70%", top: "54%" },
-    detail: "相对近期基线偏冷，持续偏冷指标较高；这不是流感病例预警。",
-  },
+const days = ["08.09", "08.10", "08.11", "08.12", "08.13", "08.14", "08.15"];
+const history: Record<CityKey, { risk: number[]; temp: number[] }> = {
+  成都: { risk: [19.39, 12.86, 10.71, 11.82, 14.88, 7.75, 2.68], temp: [27.7, 29.4, 29.2, 29.6, 29.9, 30.9, 30.7] },
+  杭州: { risk: [65.21, 58, 39.55, 24.97, 30.83, 35.56, 40.93], temp: [25.8, 26.4, 27.7, 28.9, 28, 27.2, 27.1] },
 };
 
-const pendingCities = [
-  ["北京", "61%", "28%"], ["广州", "58%", "76%"], ["上海", "73%", "48%"],
-  ["西安", "47%", "45%"], ["武汉", "57%", "55%"], ["昆明", "39%", "72%"],
-  ["哈尔滨", "75%", "14%"], ["乌鲁木齐", "20%", "27%"],
+const cityPoints = [
+  { name: "乌鲁木齐", left: "21%", top: "31%" }, { name: "拉萨", left: "28%", top: "58%" },
+  { name: "昆明", left: "41%", top: "74%" }, { name: "广州", left: "60%", top: "78%" },
+  { name: "西安", left: "49%", top: "48%" }, { name: "武汉", left: "58%", top: "59%" },
+  { name: "北京", left: "65%", top: "30%" }, { name: "哈尔滨", left: "80%", top: "17%" },
+  { name: "上海", left: "74%", top: "55%" }, { name: "海口", left: "55%", top: "88%" },
 ];
 
 export default function Home() {
-  const [mode, setMode] = useState<"public" | "professional">("public");
   const [selectedCity, setSelectedCity] = useState<CityKey>("杭州");
-  const [showRoute, setShowRoute] = useState(true);
-  const city = cities[selectedCity];
+  const [dayIndex, setDayIndex] = useState(6);
+  const [playing, setPlaying] = useState(true);
+  const [panel, setPanel] = useState<Panel>("city");
+  const [routeOn, setRouteOn] = useState(true);
 
-  const confidence = useMemo(() => mode === "public" ? "数据接入中" : "低 · 仅天气源有效", [mode]);
+  useEffect(() => {
+    if (!playing) return;
+    const timer = window.setInterval(() => setDayIndex((value) => (value + 1) % days.length), 1400);
+    return () => window.clearInterval(timer);
+  }, [playing]);
+
+  const selected = history[selectedCity];
+  const risk = selected.risk[dayIndex];
+  const temperature = selected.temp[dayIndex];
+  const riskTone = risk >= 60 ? "high" : risk >= 30 ? "watch" : "low";
+  const status = risk >= 60 ? "天气信号偏高" : risk >= 30 ? "天气信号需关注" : "天气风险较低";
+  const dateLabel = `2026.${days[dayIndex]}`;
+  const trend = useMemo(() => {
+    const previous = selected.risk[Math.max(0, dayIndex - 1)];
+    const delta = risk - previous;
+    return `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}`;
+  }, [dayIndex, risk, selected]);
 
   return (
-    <main className="app-shell">
+    <main className="health-app">
       <header className="topbar">
-        <div className="brand">
-          <div className="brand-mark" aria-hidden="true"><span /></div>
-          <div>
-            <div className="brand-name">健康风向</div>
-            <div className="brand-sub">全国健康趋势与传播风险地图</div>
-          </div>
-        </div>
-        <div className="header-actions">
-          <div className="freshness"><span /> 数据更新至 2026.08.15</div>
-          <div className="mode-switch" aria-label="显示模式">
-            <button className={mode === "public" ? "active" : ""} onClick={() => setMode("public")}>公众版</button>
-            <button className={mode === "professional" ? "active" : ""} onClick={() => setMode("professional")}>专业版</button>
-          </div>
-        </div>
+        <div className="brand"><span className="brand-cross" /><div><b>健康风向</b><small>全国健康趋势感知平台</small></div></div>
+        <div className="live-state"><i />每日更新　<span>{dateLabel}</span></div>
+        <nav>
+          <button className="active">全国态势</button>
+          <button onClick={() => setPanel(panel === "sources" ? "none" : "sources")}>数据图谱</button>
+          <a href="https://ivdc.chinacdc.cn/cnic/zyzx/lgzb/" target="_blank" rel="noreferrer">权威周报 ↗</a>
+        </nav>
       </header>
 
-      <section className="notice">
-        <span className="notice-icon">i</span>
-        <p><strong>原型数据说明</strong>　目前已接入成都、杭州一年天气数据及国家流感中心周报索引。百度、微信、抖音健康关注指数与城市迁徙强度尚待授权，不展示推测数值。</p>
-        <button aria-label="收起说明">×</button>
-      </section>
+      <section className="map-viewport">
+        <div className="ambient ambient-one" /><div className="ambient ambient-two" />
 
-      <section className="overview">
-        <div>
-          <div className="eyebrow">今日全国观察</div>
-          <h1>天气风险先行，健康信号待交叉验证</h1>
-          <p>地图每日汇总多平台关注、药品需求、官方监测、天气与人口流动。现阶段仅天气层可以计算。</p>
-        </div>
-        <div className="overview-stats">
-          <div><span>已接通城市</span><strong>2</strong><small>/ 30 首轮目标</small></div>
-          <div><span>有效数据源</span><strong>2</strong><small>天气 · 官方周报</small></div>
-          <div><span>当前置信度</span><strong className="confidence">{confidence}</strong><small>不发布疾病预警</small></div>
-        </div>
-      </section>
-
-      <section className="workspace">
-        <div className="map-card">
-          <div className="card-head">
-            <div>
-              <h2>全国健康趋势图</h2>
-              <p>2026年8月15日 · 城市日级视图</p>
-            </div>
-            <div className="layer-pills">
-              <button className="active"><i className="dot weather" />天气风险</button>
-              <button disabled><i className="dot pending" />健康关注　待授权</button>
-              <button className={showRoute ? "active" : ""} onClick={() => setShowRoute(!showRoute)}><i className="dot route" />关联路线</button>
-            </div>
-          </div>
-
-          <div className="map-stage" aria-label="中国城市健康趋势示意地图">
-            <div className="map-grid" />
-            <div className="china-shape"><span>CHINA</span></div>
-            {pendingCities.map(([name, left, top]) => (
-              <div className="city pending-city" style={{ left, top }} key={name}>
-                <span className="point" /><label>{name}</label>
-              </div>
-            ))}
-            {(Object.keys(cities) as CityKey[]).map((name) => (
-              <button
-                key={name}
-                className={`city active-city ${cities[name].tone} ${selectedCity === name ? "selected" : ""}`}
-                style={cities[name].position}
-                onClick={() => setSelectedCity(name)}
-                aria-label={`查看${name}`}
-              >
-                <span className="pulse" /><span className="point" /><label>{name}</label>
-              </button>
-            ))}
-            {showRoute && <div className="route-line"><span>关联框架 · 流动强度待授权</span></div>}
-            <div className="map-legend"><span><i className="legend low" />较低</span><span><i className="legend medium" />关注</span><span><i className="legend high" />较高</span><span><i className="legend missing" />待接入</span></div>
-          </div>
-
-          <div className="timeline">
-            <button aria-label="播放时间轴">▶</button>
-            <div className="timeline-track"><span style={{ width: "86%" }} /><i style={{ left: "86%" }} /></div>
-            <span>2025.08.16</span><strong>2026.08.15</strong>
-          </div>
+        <div className="map-title">
+          <span>CHINA HEALTH SIGNALS</span>
+          <h1>全国健康态势</h1>
+          <p>以地图为核心，融合气象、官方监测与城市间关联信号</p>
         </div>
 
-        <aside className="side-panel">
-          <div className="city-header">
-            <div><span className={`status-dot ${city.tone}`} /><h2>{selectedCity}</h2><p>{city.status}</p></div>
-            <button aria-label="关闭城市详情">×</button>
-          </div>
-          <div className="score-block">
-            <div><span>天气风险修正分</span><strong>{city.weather.toFixed(1)}</strong><small>/ 100</small></div>
-            <div className="score-ring" style={{ "--score": `${city.weather * 3.6}deg` } as React.CSSProperties}><span>{Math.round(city.weather)}</span></div>
-          </div>
-          <div className="city-summary">{city.detail}</div>
-          <div className="metrics">
-            <div><span>平均气温</span><strong>{city.temperature}</strong></div>
-            <div><span>近期变化</span><strong>{city.change}</strong></div>
-            <div><span>健康关注</span><strong className="pending-text">待授权</strong></div>
-            <div><span>人口流动</span><strong className="pending-text">待授权</strong></div>
-          </div>
+        <div className="summary-chips">
+          <div><i className="chip-blue" /><span>已接入城市</span><b>02</b><small>/ 30</small></div>
+          <div><i className="chip-cyan" /><span>有效数据层</span><b>02</b><small>/ 06</small></div>
+          <div><i className="chip-amber" /><span>疾病预警</span><b className="text-small">暂不发布</b></div>
+        </div>
 
-          {mode === "professional" && (
-            <div className="professional-box">
-              <h3>专业数据状态</h3>
-              <div><span>天气历史完整度</span><strong>365 / 365</strong></div>
-              <div><span>国家流感中心周报</span><strong>20期索引</strong></div>
-              <div><span>模型版本</span><strong>weather-0.1</strong></div>
-              <div><span>可发布综合风险</span><strong className="no">否</strong></div>
-            </div>
-          )}
-
-          <div className="route-box">
-            <div className="route-title"><span>成都</span><i>→</i><span>杭州</span></div>
-            <p>路线结构已建立。健康趋势、迁徙强度和时间滞后字段为空，因此暂不计算输入风险。</p>
-            <div className="route-status"><span /> 审慎模式运行中</div>
-          </div>
+        <aside className="layer-dock">
+          <span>可视化图层</span>
+          <button className="selected"><i className="layer-weather">⌁</i><b>天气风险</b><small>已接通</small></button>
+          <button><i>＋</i><b>症状关注</b><small>待接入</small></button>
+          <button><i>◇</i><b>药品需求</b><small>待接入</small></button>
+          <button className={routeOn ? "selected" : ""} onClick={() => setRouteOn(!routeOn)}><i>⇢</i><b>关联路线</b><small>{routeOn ? "显示中" : "已隐藏"}</small></button>
         </aside>
-      </section>
 
-      <section className="bottom-grid">
-        <div className="ranking-card">
-          <div className="card-head compact"><div><h2>城市观察榜</h2><p>仅按已接入天气指标排列</p></div><span className="tag">非疾病榜单</span></div>
-          <div className="ranking-row"><b>1</b><span className="rank-city">杭州<small>天气信号需关注</small></span><div className="bar"><i style={{ width: "41%" }} /></div><strong>40.9</strong></div>
-          <div className="ranking-row"><b>2</b><span className="rank-city">成都<small>天气风险较低</small></span><div className="bar"><i style={{ width: "3%" }} /></div><strong>2.7</strong></div>
-          <div className="empty-ranking">其余28座首轮城市等待数据接入</div>
-        </div>
-
-        <div className="source-card">
-          <div className="card-head compact"><div><h2>数据源健康度</h2><p>多源交叉验证状态</p></div></div>
-          <div className="source-list">
-            <div><i className="source-ok" /><span>历史天气<small>成都、杭州各365天</small></span><strong>已接通</strong></div>
-            <div><i className="source-ok" /><span>国家流感中心<small>周级权威校准</small></span><strong>已接通</strong></div>
-            <div><i className="source-wait" /><span>百度 · 微信 · 抖音<small>健康关注与药品搜索</small></span><strong>待授权</strong></div>
-            <div><i className="source-wait" /><span>城市迁徙<small>公开展示，批量授权待确认</small></span><strong>待授权</strong></div>
+        <div className="china-map" aria-label="中国全国健康态势示意图">
+          <div className="territory-main">
+            <div className="province-lines" />
+            <span className="map-word">全国城市态势</span>
           </div>
+          <div className="territory-island hainan" /><div className="territory-island taiwan" />
+          <div className="south-sea"><i /><i /><i /><i /><i /></div>
+
+          {cityPoints.map((point) => <div className="map-city muted" key={point.name} style={{ left: point.left, top: point.top }}><i /><span>{point.name}</span></div>)}
+
+          <button className={`map-city live chengdu ${selectedCity === "成都" ? "chosen" : ""}`} onClick={() => { setSelectedCity("成都"); setPanel("city"); }}><i><em /></i><span>成都<small>{history.成都.risk[dayIndex].toFixed(1)}</small></span></button>
+          <button className={`map-city live hangzhou ${selectedCity === "杭州" ? "chosen" : ""}`} onClick={() => { setSelectedCity("杭州"); setPanel("city"); }}><i><em /></i><span>杭州<small>{history.杭州.risk[dayIndex].toFixed(1)}</small></span></button>
+
+          {routeOn && <div className="flow-route"><div className="flow-particle" /><div className="flow-particle second" /><span>潜在关联 · 数据待授权</span></div>}
+          <div className="map-stamp">全国态势可视化原型 · 正式地图底图将采用自然资源部标准地图并标注审图号</div>
+        </div>
+
+        <div className="visual-legend"><span><i className="low" />0–29 较低</span><span><i className="watch" />30–59 关注</span><span><i className="high" />60+ 偏高</span><span><i className="missing" />数据待接入</span></div>
+
+        <div className="mini-chart">
+          <div className="mini-head"><span>{selectedCity} · 近7日天气风险</span><b>{risk.toFixed(1)}</b></div>
+          <div className="bars">{selected.risk.map((value, index) => <button key={days[index]} className={index === dayIndex ? "active" : ""} onClick={() => { setDayIndex(index); setPlaying(false); }} aria-label={`${days[index]}风险${value}`}><i style={{ height: `${Math.max(7, value)}%` }} /><small>{days[index].slice(3)}</small></button>)}</div>
+        </div>
+
+        <div className={`right-panel ${panel === "none" ? "collapsed" : ""}`}>
+          <div className="panel-tabs">
+            <button className={panel === "city" ? "active" : ""} onClick={() => setPanel("city")}>城市</button>
+            <button className={panel === "sources" ? "active" : ""} onClick={() => setPanel("sources")}>数据</button>
+            <button className="collapse-button" onClick={() => setPanel(panel === "none" ? "city" : "none")}>{panel === "none" ? "‹" : "›"}</button>
+          </div>
+
+          {panel === "city" && <div className="panel-content">
+            <div className="city-title"><div><small>选中城市</small><h2>{selectedCity}</h2><p><i className={riskTone} />{status}</p></div><div className={`risk-orbit ${riskTone}`} style={{ "--risk": `${risk * 3.6}deg` } as React.CSSProperties}><b>{Math.round(risk)}</b><small>/100</small></div></div>
+            <div className="metric-grid"><div><span>日均气温</span><b>{temperature.toFixed(1)}°</b></div><div><span>日变化</span><b className={Number(trend) > 0 ? "up" : "down"}>{trend}</b></div><div><span>健康关注</span><b className="pending">待授权</b></div><div><span>迁徙强度</span><b className="pending">待授权</b></div></div>
+            <div className="signal-stack"><h3>信号构成</h3><div><span>天气与环境</span><i><em style={{ width: `${risk}%` }} /></i><b>{risk.toFixed(1)}</b></div><div className="disabled"><span>多平台关注</span><i /><b>—</b></div><div className="disabled"><span>药品需求</span><i /><b>—</b></div><div className="disabled"><span>人口流动</span><i /><b>—</b></div></div>
+            <div className="route-card"><div><span>成都</span><i>······→</i><span>杭州</span></div><p>路线动效仅表达计算框架。缺少获准的流动和健康趋势数据时，不输出传播分。</p></div>
+          </div>}
+
+          {panel === "sources" && <div className="panel-content source-plan">
+            <small className="overline">FREE DATA STRATEGY</small><h2>免费数据替代方案</h2><p className="intro">不寻找单一“百度指数平替”，改用多源一致性判断。</p>
+            <div className="source-node ready"><i>01</i><div><b>官方流感监测</b><span>国家流感中心 · WHO FluNet</span></div><em>核心</em></div>
+            <div className="source-node ready"><i>02</i><div><b>天气与历史环境</b><span>公开气象数据 · 日级城市</span></div><em>已接</em></div>
+            <div className="source-node candidate"><i>03</i><div><b>Google Trends</b><span>免费搜索热度 · 全国/省级辅助</span></div><em>申请API</em></div>
+            <div className="source-node candidate"><i>04</i><div><b>GDELT开放新闻</b><span>新闻提及量 · 地点与事件信号</span></div><em>免费</em></div>
+            <div className="source-node own"><i>05</i><div><b>匿名症状自报</b><span>自建第一方城市日级信号</span></div><em>建议</em></div>
+            <div className="source-node own"><i>06</i><div><b>药店/诊所聚合合作</b><span>只接收匿名汇总，不收个人记录</span></div><em>长期</em></div>
+            <div className="source-note">微信指数可作为人工抽样核验；不建议依赖非公开接口或网页抓取作为生产主链路。</div>
+          </div>}
+        </div>
+
+        <div className="timeline-bar">
+          <button onClick={() => setPlaying(!playing)} aria-label={playing ? "暂停" : "播放"}>{playing ? "Ⅱ" : "▶"}</button>
+          <span>2026.08.09</span>
+          <div className="time-track">{days.map((day, index) => <button key={day} className={index <= dayIndex ? "passed" : ""} onClick={() => { setDayIndex(index); setPlaying(false); }}><i /><small>{day}</small></button>)}</div>
+          <b>{dateLabel}</b><em>{playing ? "动态播放中" : "已暂停"}</em>
         </div>
       </section>
-
-      <footer><span>健康风向 · 数据可行性原型 V0.1</span><p>趋势指标不等于病例数，不替代医疗建议或疾控部门发布。</p><a href="https://ivdc.chinacdc.cn/cnic/zyzx/lgzb/" target="_blank" rel="noreferrer">查看权威流感周报 ↗</a></footer>
     </main>
   );
 }

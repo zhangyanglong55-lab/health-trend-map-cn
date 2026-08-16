@@ -13,8 +13,20 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://health-trend-map-cn.zhangyanglong55.chatgpt.site"),
   title: "健康风向｜全国健康趋势地图",
-  description: "以公开疾病监测、天气、健康关注与人口流动进行交叉验证的健康趋势地图。",
+  description: "蓝色健康科技风全国态势地图，融合公开疾病监测、天气与城市关联信号。",
+  openGraph: {
+    title: "健康风向｜全国健康趋势地图",
+    description: "以全国地图为核心的健康趋势与城市关联可视化。",
+    images: [{ url: "/og.png", width: 1792, height: 896, alt: "健康风向全国健康趋势地图" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "健康风向｜全国健康趋势地图",
+    description: "以全国地图为核心的健康趋势与城市关联可视化。",
+    images: ["/og.png"],
+  },
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
