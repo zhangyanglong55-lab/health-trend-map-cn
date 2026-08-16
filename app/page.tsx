@@ -1,11 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import weatherData from "./data/national-weather.json";
 
 type Panel = "city" | "ranking" | "sources" | "none";
 type Filter = "all" | "high" | "watch" | "low";
 type City = (typeof weatherData.cities)[number];
+
+const provinceInfo: Record<string, { name: string; capital: string }> = {
+  Qinghai:{name:"青海省",capital:"西宁"},Xinjiang:{name:"新疆维吾尔自治区",capital:"乌鲁木齐"},Gansu:{name:"甘肃省",capital:"兰州"},"Inner Mongolia":{name:"内蒙古自治区",capital:"呼和浩特"},Jilin:{name:"吉林省",capital:"长春"},Heilongjiang:{name:"黑龙江省",capital:"哈尔滨"},Guangxi:{name:"广西壮族自治区",capital:"南宁"},Guizhou:{name:"贵州省",capital:"贵阳"},Henan:{name:"河南省",capital:"郑州"},Taiwan:{name:"台湾省",capital:"台北"},Zhejiang:{name:"浙江省",capital:"杭州"},Fujian:{name:"福建省",capital:"福州"},Guangdong:{name:"广东省",capital:"广州"},Beijing:{name:"北京市",capital:"北京"},Liaoning:{name:"辽宁省",capital:"沈阳"},Hebei:{name:"河北省",capital:"石家庄"},Tianjin:{name:"天津市",capital:"天津"},Shandong:{name:"山东省",capital:"济南"},Anhui:{name:"安徽省",capital:"合肥"},Jiangsu:{name:"江苏省",capital:"南京"},Shanghai:{name:"上海市",capital:"上海"},Sichuan:{name:"四川省",capital:"成都"},Chongqing:{name:"重庆市",capital:"重庆"},Hunan:{name:"湖南省",capital:"长沙"},Yunnan:{name:"云南省",capital:"昆明"},Shaanxi:{name:"陕西省",capital:"西安"},Ningxia:{name:"宁夏回族自治区",capital:"银川"},Shanxi:{name:"山西省",capital:"太原"},Hubei:{name:"湖北省",capital:"武汉"},Jiangxi:{name:"江西省",capital:"南昌"},"Hong Kong":{name:"香港特别行政区",capital:"香港"},Macau:{name:"澳门特别行政区",capital:"澳门"},Hainan:{name:"海南省",capital:"海口"},Tibet:{name:"西藏自治区",capital:"拉萨"}
+};
 
 const shortDays = weatherData.dates.map((value) => value.slice(5).replace("-", "."));
 
@@ -43,6 +47,41 @@ export default function Home() {
   const [panel, setPanel] = useState<Panel>("city");
   const [filter, setFilter] = useState<Filter>("all");
   const [weatherOn, setWeatherOn] = useState(true);
+  const [mapSvg, setMapSvg] = useState("");
+  const [selectedProvince, setSelectedProvince] = useState("浙江省");
+
+  useEffect(() => {
+    fetch(`/risk-map-${dayIndex}.svg`).then(response => response.text()).then(svg => {
+      const interactive = svg.replace(/<path /g, '<path tabindex="0" role="button" ');
+      setMapSvg(interactive);
+    });
+  }, [dayIndex]);
+
+  const chooseProvince = (englishName: string) => {
+    const province = provinceInfo[englishName];
+    if (!province) return;
+    setSelectedProvince(province.name);
+    setSelectedName(province.capital);
+    setPanel("city");
+  };
+
+  const handleProvinceClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    const path = (event.target as Element).closest("path[data-name]");
+    if (!path) return;
+    event.currentTarget.querySelector(".province-active")?.classList.remove("province-active");
+    path.classList.add("province-active");
+    chooseProvince(path.getAttribute("data-name") ?? "");
+  };
+
+  const handleProvinceKey = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    const path = (event.target as Element).closest("path[data-name]");
+    if (!path) return;
+    event.preventDefault();
+    event.currentTarget.querySelector(".province-active")?.classList.remove("province-active");
+    path.classList.add("province-active");
+    chooseProvince(path.getAttribute("data-name") ?? "");
+  };
 
   const selected = weatherData.cities.find((city) => city.name === selectedName) ?? weatherData.cities[0];
   const risk = surveillanceRisk(selected, dayIndex);
@@ -102,7 +141,8 @@ export default function Home() {
         </aside>
 
         <div className="china-map" aria-label="全国34省区感冒流行风险图">
-          <img className="real-china-map" src={`/risk-map-${dayIndex}.svg`} alt={`${dateLabel}中国各省感冒流行风险分级地图`} />
+          <div className="interactive-china-map" onClick={handleProvinceClick} onKeyDown={handleProvinceKey} dangerouslySetInnerHTML={{ __html: mapSvg }} aria-label={`${dateLabel}中国各省流感综合观测地图，点击省份查看`} />
+          <div className="province-reveal" key={selectedProvince}><small>已选择省份</small><b>{selectedProvince}</b><span>点击其他省份继续查看</span></div>
 
           {weatherData.cities.map((city) => {
             const cityRisk = surveillanceRisk(city, dayIndex);
