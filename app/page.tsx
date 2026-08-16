@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import weatherData from "./data/national-weather.json";
 
 type Panel = "city" | "ranking" | "sources" | "none";
@@ -17,19 +17,19 @@ function statusFor(risk: number) {
   return risk >= 60 ? "天气信号偏高" : risk >= 30 ? "天气信号需关注" : "天气风险较低";
 }
 
+function mapPosition(city: City) {
+  return {
+    left: `${(city.longitude - 73) / (135 - 73) * 100}%`,
+    top: `${(54 - city.latitude) / (54 - 18) * 100}%`,
+  };
+}
+
 export default function Home() {
   const [selectedName, setSelectedName] = useState("杭州");
   const [dayIndex, setDayIndex] = useState(6);
-  const [playing, setPlaying] = useState(true);
   const [panel, setPanel] = useState<Panel>("city");
   const [filter, setFilter] = useState<Filter>("all");
   const [weatherOn, setWeatherOn] = useState(true);
-
-  useEffect(() => {
-    if (!playing) return;
-    const timer = window.setInterval(() => setDayIndex((value) => (value + 1) % shortDays.length), 1500);
-    return () => window.clearInterval(timer);
-  }, [playing]);
 
   const selected = weatherData.cities.find((city) => city.name === selectedName) ?? weatherData.cities[0];
   const risk = selected.risk[dayIndex];
@@ -88,9 +88,7 @@ export default function Home() {
         </aside>
 
         <div className="china-map" aria-label="全国34城市天气健康态势图">
-          <div className="territory-main"><div className="province-lines" /><span className="map-word">全国天气态势</span></div>
-          <div className="territory-island hainan" /><div className="territory-island taiwan" />
-          <div className="south-sea"><i /><i /><i /><i /><i /></div>
+          <img className="real-china-map" src="/china-provinces.svg" alt="中国省级行政区地图" />
 
           {weatherData.cities.map((city) => {
             const cityRisk = city.risk[dayIndex];
@@ -98,13 +96,12 @@ export default function Home() {
             return <button
               key={city.name}
               className={`map-city national-city ${tone} ${selectedName === city.name ? "chosen" : ""} ${visible(city) ? "visible" : "filtered"}`}
-              style={{ left: `${city.left}%`, top: `${city.top}%`, "--bubble": `${8 + cityRisk * 0.09}px` } as React.CSSProperties}
+              style={{ ...mapPosition(city), "--bubble": `${8 + cityRisk * 0.09}px` } as React.CSSProperties}
               onClick={() => { setSelectedName(city.name); setPanel("city"); }}
               aria-label={`${city.name}天气风险${cityRisk.toFixed(1)}`}
             ><i><em /></i><span>{city.name}<small>{cityRisk.toFixed(0)}</small></span></button>;
           })}
 
-          <div className="weather-wave wave-one" /><div className="weather-wave wave-two" /><div className="weather-wave wave-three" />
           <div className="map-stamp">全国态势可视化原型 · 天气风险不等于疾病病例或医学预警</div>
         </div>
 
@@ -112,7 +109,7 @@ export default function Home() {
 
         <div className="mini-chart">
           <div className="mini-head"><span>{selected.name} · 近7日天气风险</span><b>{risk.toFixed(1)}</b></div>
-          <div className="bars">{selected.risk.map((value, index) => <button key={shortDays[index]} className={index === dayIndex ? "active" : ""} onClick={() => { setDayIndex(index); setPlaying(false); }} aria-label={`${shortDays[index]}风险${value}`}><i style={{ height: `${Math.max(7, value)}%` }} /><small>{shortDays[index].slice(3)}</small></button>)}</div>
+          <div className="bars">{selected.risk.map((value, index) => <button key={shortDays[index]} className={index === dayIndex ? "active" : ""} onClick={() => setDayIndex(index)} aria-label={`${shortDays[index]}风险${value}`}><i style={{ height: `${Math.max(7, value)}%` }} /><small>{shortDays[index].slice(3)}</small></button>)}</div>
         </div>
 
         <div className={`right-panel ${panel === "none" ? "collapsed" : ""}`}>
@@ -131,10 +128,10 @@ export default function Home() {
         </div>
 
         <div className="timeline-bar">
-          <button onClick={() => setPlaying(!playing)} aria-label={playing ? "暂停" : "播放"}>{playing ? "Ⅱ" : "▶"}</button><span>{weatherData.dates[0].replaceAll("-", ".")}</span>
-          <input type="range" min="0" max={shortDays.length - 1} step="1" value={dayIndex} onChange={(event) => { setDayIndex(Number(event.target.value)); setPlaying(false); }} aria-label="拖动查看日期" style={{ "--progress": `${dayIndex / (shortDays.length - 1) * 100}%` } as React.CSSProperties} />
-          <div className="date-ticks">{shortDays.map((day, index) => <button key={day} className={index === dayIndex ? "active" : ""} onClick={() => { setDayIndex(index); setPlaying(false); }}>{day}</button>)}</div>
-          <b>{dateLabel}</b><em>{playing ? "全国天气动态播放中" : "拖动时间轴查看"}</em>
+          <span className="manual-hint">拖动日期</span><span>{weatherData.dates[0].replaceAll("-", ".")}</span>
+          <input type="range" min="0" max={shortDays.length - 1} step="1" value={dayIndex} onChange={(event) => setDayIndex(Number(event.target.value))} aria-label="手动拖动查看日期" style={{ "--progress": `${dayIndex / (shortDays.length - 1) * 100}%` } as React.CSSProperties} />
+          <div className="date-ticks">{shortDays.map((day, index) => <button key={day} className={index === dayIndex ? "active" : ""} onClick={() => setDayIndex(index)}>{day}</button>)}</div>
+          <b>{dateLabel}</b><em>手动拖动时间轴查看</em>
         </div>
       </section>
     </main>
