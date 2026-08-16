@@ -59,6 +59,7 @@ export default function Home() {
   const [mapSvg, setMapSvg] = useState("");
   const [selectedProvince, setSelectedProvince] = useState("浙江省");
   const [provinceCardPosition, setProvinceCardPosition] = useState({ left: 72, top: 51 });
+  const [mobilityHelp, setMobilityHelp] = useState(false);
 
   useEffect(() => {
     fetch(disease === "hiv" ? "/china-provinces.svg" : `/risk-map-${dayIndex}.svg`).then(response => response.text()).then(svg => {
@@ -185,7 +186,9 @@ export default function Home() {
           <div className="map-stamp">{disease === "hiv" ? "艾滋病采用全国公开统计口径；地图不作省级风险着色或排名，避免误读与地域污名化" : "红色仅标注综合观测前10；箭头为百度迁徙人群流动关联，不代表病毒已沿该路线传播"}</div>
         </div>
 
-        {disease === "influenza" ? <div className="visual-legend"><b>地图等级</b><button className={filter === "high" ? "active" : ""} onClick={() => setFilter(filter === "high" ? "all" : "high")}><i className="risk-high" />前10：浅红 → 深红</button><button className={filter === "low" ? "active" : ""} onClick={() => setFilter(filter === "low" ? "all" : "low")}><i className="other-blue" />其余：蓝 / 黄 / 绿</button><span className="route-key">⇢ 人群流动关联</span></div> : <div className="visual-legend hiv-legend"><b>全国统一公开数据</b><span>不进行省份风险比较</span></div>}
+        {disease === "influenza" ? <div className="visual-legend"><b>地图等级</b><button className={filter === "high" ? "active" : ""} onClick={() => setFilter(filter === "high" ? "all" : "high")}><i className="risk-high" />前10：浅红 → 深红</button><button className={filter === "low" ? "active" : ""} onClick={() => setFilter(filter === "low" ? "all" : "low")}><i className="other-blue" />其余：蓝 / 黄 / 绿</button><button className="route-key" onClick={() => setMobilityHelp(!mobilityHelp)}>⇢ 人群流动关联 <i>?</i></button></div> : <div className="visual-legend hiv-legend"><b>全国统一公开数据</b><span>不进行省份风险比较</span></div>}
+
+        {disease === "influenza" && mobilityHelp && <div className="mobility-help" role="dialog" aria-label="人口流动关联说明"><button className="help-close" onClick={() => setMobilityHelp(false)} aria-label="关闭说明">×</button><small>POPULATION MOBILITY</small><h3>什么是人口流动关联？</h3><p>它表示一段时间内，人群从一个城市流向另一个城市的相对规模与方向。地图箭头连接的是人员流动较活跃的城市通道，不是病毒移动轨迹。</p><h4>有什么用？</h4><div><b>01</b><span><strong>提前观察输入压力</strong>当流感活跃地区与其他城市人流增加时，可提醒目的地加强监测。</span></div><div><b>02</b><span><strong>辅助资源准备</strong>帮助评估检测、发热门诊、疫苗和科普资源是否需要提前配置。</span></div><div><b>03</b><span><strong>与疾病数据交叉验证</strong>只有迁徙、流感监测和本地病例趋势同时变化，才值得进一步研判。</span></div><em>重要：人口流动只能作为辅助信号，不能证明某个人携带病毒，也不能单独预测疫情。</em></div>}
 
         {disease === "influenza" ? <div className="mini-chart">
           <div className="mini-head"><span>{selected.name} · 近7日环境关联值</span><b>{risk.toFixed(1)}</b></div>
