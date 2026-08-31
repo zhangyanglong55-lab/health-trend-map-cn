@@ -1,6 +1,7 @@
 {
-  "name": "site-creator-vinext-starter",
-  "version": "0.1.0",
+  "name": "health-trend-map-cn",
+  "version": "1.0.0",
+  "description": "全国多病种健康趋势、天气与人口流动关联可视化平台",
   "private": true,
   "engines": {
     "node": ">=22.13.0"

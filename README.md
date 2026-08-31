@@ -1,100 +1,81 @@
-# vinext-starter
+# 健康风向｜全国健康趋势感知平台
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+一个以中国地图为核心的公共健康趋势可视化项目。平台面向普通公众及公共卫生相关人员，将疾病监测、天气环境和人口流动等信息分层呈现，帮助用户理解区域健康态势及其数据依据。
 
-## Prerequisites
+线上地址：[health-trend-map-cn.zhangyanglong55.chatgpt.site](https://health-trend-map-cn.zhangyanglong55.chatgpt.site/)
 
-- Node.js `>=22.13.0`
+## 主要功能
 
-## Quick Start
+- 真实中国省级行政区地图
+- 省份点击、高亮动效与详情联动
+- 流感综合观测 Top 10
+- 城市天气图标、温度、降水和风速
+- 人口流动关联路线及通俗解释
+- 手动时间轴，支持历史日期切换
+- 流感与艾滋病病种切换
+- 艾滋病官方月度数据、检测与防治说明
+- 数据来源、更新频率及口径说明
+- 桌面端与移动端响应式界面
+
+## 数据原则
+
+项目优先使用可追溯的公开数据：
+
+- 国家流感中心流感监测周报
+- 中国疾病预防控制中心法定传染病月报
+- Open-Meteo 历史天气数据
+- 百度迁徙人口流动信息
+
+人口流动仅表示城市之间人员流入、流出的相对规模和方向，不代表病毒实际传播路线。综合观测值用于产品探索与辅助观察，不等于确诊病例数量、个人患病概率或医学诊断。
+
+## 技术栈
+
+- React 19
+- TypeScript
+- Vinext / Vite
+- Tailwind CSS 4
+- Cloudflare Workers 兼容构建
+
+## 本地运行
+
+环境要求：Node.js `>=22.13.0`。
 
 ```bash
-npm install
-npm run dev
-npm run build
+pnpm install
+pnpm dev
 ```
 
-This starter does not use `wrangler.jsonc`.
+生产构建：
 
-## Included Shape
-
-- edit site code under `app/`
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/schema.ts` starts intentionally empty
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
-
-## Workspace Auth Headers
-
-Signed-in visitors receive both `oai-authenticated-user-id` and `oai-authenticated-user-email`. Private Sites require every visitor to sign in; public Sites may also have anonymous visitors, for whom neither header is present.
-
-The user ID is stable for the same user on the same Site and different across Sites. Email and name are intended for display or contact purposes.
-
-SIWC-authenticated workspace sites may also receive
-`oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty
-`name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by
-`oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
-
-Treat the full name as optional and fall back to email when it is absent:
-
-```tsx
-import { headers } from "next/headers";
-
-export default async function Home() {
-  const requestHeaders = await headers();
-  const userId = requestHeaders.get("oai-authenticated-user-id");
-  const email = requestHeaders.get("oai-authenticated-user-email");
-  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? decodeURIComponent(encodedFullName)
-      : null;
-
-  const displayName = fullName ?? email;
-  // ...
-}
+```bash
+pnpm build
 ```
 
-## Optional Dispatch-Owned ChatGPT Sign-In
+## 项目结构
 
-Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs
-optional or required ChatGPT sign-in:
+```text
+app/                  页面、样式和健康数据
+public/               中国地图及风险地图资源
+scripts/              地图资源生成脚本
+docs/                 产品需求文档（PRD）
+tests/                基础测试
+.openai/hosting.json  Sites 部署配置
+```
 
-- Use `getChatGPTUser()` for optional signed-in UI.
-- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send
-  anonymous visitors through Sign in with ChatGPT.
-- Use `chatGPTSignInPath(returnTo)` and `chatGPTSignOutPath(returnTo)` for
-  browser links or actions.
-- Pass a same-origin relative `returnTo` path for the destination after sign-in
-  or sign-out. The helper validates and safely encodes it.
-- Mark protected pages with `export const dynamic = "force-dynamic"` because
-  they depend on per-request identity headers.
+## 产品文档
 
-Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the
-OAuth cookies, and identity header injection. Do not implement app routes for
-those reserved paths. Routes that do not import and call the helper remain
-anonymous-compatible.
+- [健康风向 PRD](docs/健康风向-PRD.md)
 
-SIWC establishes identity only; it does not prove workspace membership. Use the
-Sites hosting platform's access policy controls for workspace-wide restrictions,
-or enforce explicit server-side membership or allowlist checks.
+## 数据与医学免责声明
 
-Use SIWC for account pages, user-specific dashboards, saved records, and write
-actions tied to the current ChatGPT user. Leave public content anonymous.
+本项目是公共健康信息可视化产品原型，不提供诊断或治疗服务，也不能替代疾病预防控制机构、医疗机构和卫生行政部门发布的正式信息。
 
-## Useful Commands
+对于艾滋病等敏感疾病，项目不使用搜索热度推断感染情况，不生成未经官方数据支持的省级风险排名，并避免可能造成地域或人群污名化的表达。
 
-- `npm run dev`: start local development
-- `npm run build`: verify the vinext build output
-- `npm test`: build the starter and verify its rendered loading skeleton
-- `npm run db:generate`: generate Drizzle migrations after schema changes
+## 地图合规
 
-## Learn More
+公开发布或商业使用前，应进一步核验地图边界、审图号、数据授权及相关法律法规要求。
 
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+## License
+
+当前项目暂未授予开源许可证。未经项目所有者明确授权，不得将代码或数据用于商业用途。
